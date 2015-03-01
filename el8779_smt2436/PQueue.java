@@ -26,7 +26,7 @@ public class PQueue {
 	public int insert(String name, int priority){ 
 	
 		if (size >= maxSize_){
-			//BLOCK
+			//TODO BLOCK
 		}
 		
 		return -1;
@@ -38,9 +38,12 @@ public class PQueue {
 	 * @return the position of the name in the list, if not found return -1
 	 */
 	public int search(String name){
-		
+		Node temp = head;
 		for (int i = 0; i < size; i++){
-			
+			temp = temp.next;
+			if (temp != null && temp.name == name){
+				return i;
+			}
 		}
 		return -1;
 	}
@@ -51,14 +54,21 @@ public class PQueue {
 	 * The name is deleted from the list.
 	 */
 	public String getFirst(){ 
-		return "";
+		if (size == 0){
+			//TODO BLOCK
+		}
+		String res = head.next.name;
+		head = head.next.next;
+		return res;
 	}
 
 	
 	class Node {
+		
 		final String name;
 		final int priority;
 		Node next;
+		
 		public Node(String name, int priority, Node next){
 			this.name = name;
 			this.priority = priority; 
