@@ -5,7 +5,7 @@ public class Client {
 	private static int clientID;
 	private static String addressIP;
 	
-	static void main (String[] args) {
+	public static void main(String[] args) {
 		
 		if(args.length < 1) {
 			throw new IllegalArgumentException("Must provide input");
