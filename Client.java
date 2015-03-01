@@ -5,13 +5,13 @@ public class Client {
 	private static int clientID;
 	private static String addressIP;
 	
-	static void main (String args[]) {
+	static void main (String[] args) {
 		
 		if(args.length < 1) {
 			throw new IllegalArgumentException("Must provide input");
 		}
 		
-		String parts[] = args[0].split(" ");
+		String[] parts = args[0].split(" ");
 		
 		if(parts.length != 2) {
 			throw new IllegalArgumentException("Must provide <clientID ip_server>");

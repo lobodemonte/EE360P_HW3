@@ -5,7 +5,7 @@ public class Server {
 	
 	private static int bookAvail[];
 	
-	static void main (String args[]) {
+	static void main (String[] args) {
 		
 		if(args.length == 0) {
 			throw new IllegalArgumentException("Must provide <#books UDPport TCPport>");
@@ -70,7 +70,7 @@ public class Server {
 				////////////////
 				
 				String msg = new String(datapacket.getData());
-				String msgParts[] = msg.split(" ");
+				String[] msgParts = msg.split(" ");
 				
 				if(msgParts.length != 3) {
 					returnMsg = "error".getBytes();
