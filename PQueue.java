@@ -1,7 +1,4 @@
-package el8779_smt2436;
-
 import java.util.LinkedList;
-
 import autosynch.*;
 
 public monitor class PQueue {
@@ -16,7 +13,9 @@ public monitor class PQueue {
 	 * @param m
 	 */
 	public PQueue(int m) {
-		if (m <= 0){ throw new IllegalArgumentException(); }
+		if (m <= 0){ 
+			throw new IllegalArgumentException(); 
+		}
 		list = new LinkedList<Node>();
 		maxSize_ = m;
 	}
@@ -35,11 +34,15 @@ public monitor class PQueue {
 		}
 		waituntil(list.size() < maxSize_);
 		
-		if (list.contains(new Node(name, priority))){return -1;}
+		if (list.contains(new Node(name, priority))){
+			return -1;
+		}
 		
 		int position = 0;
 		for (Node n: list){
-			if (priority > n.priority){ break; }
+			if (priority > n.priority){ 
+				break; 
+			}
 			++position;
 			
 		}
