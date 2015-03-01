@@ -25,6 +25,10 @@ public class PQueue {
 	 */
 	public int insert(String name, int priority){ 
 	
+		if (priority < 0 && priority > 9){
+			throw new IllegalArgumentException();
+		}
+		
 		if (size >= maxSize_){
 			//TODO BLOCK
 		}
@@ -38,13 +42,7 @@ public class PQueue {
 	 * @return the position of the name in the list, if not found return -1
 	 */
 	public int search(String name){
-		Node temp = head;
-		for (int i = 0; i < size; i++){
-			temp = temp.next;
-			if (temp != null && temp.name == name){
-				return i;
-			}
-		}
+		
 		return -1;
 	}
 	
@@ -57,13 +55,11 @@ public class PQueue {
 		if (size == 0){
 			//TODO BLOCK
 		}
-		String res = head.next.name;
-		head = head.next.next;
-		return res;
+		return "";
 	}
 
 	
-	class Node {
+	private class Node {
 		
 		final String name;
 		final int priority;
