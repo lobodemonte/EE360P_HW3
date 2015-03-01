@@ -1,7 +1,4 @@
-package el8779_smt2436;
-
 import java.util.LinkedList;
-
 import autosynch.*;
 
 public monitor class PQueue {
