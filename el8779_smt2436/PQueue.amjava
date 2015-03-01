@@ -1,15 +1,10 @@
 package el8779_smt2436;
 
-import java.util.LinkedList;
-
-import autosynch.*;
-
 public monitor class PQueue {
 
 	private final int maxSize_;
+	private int size;
 	Node head = null;
-	
-	LinkedList<Node> list;
 	
 	/**
 	 * Creates a Priority Queue with maximum allowed size as m
@@ -17,8 +12,9 @@ public monitor class PQueue {
 	 */
 	public PQueue(int m) {
 		if (m <= 0){ throw new IllegalArgumentException(); }
-		list = new LinkedList<Node>();
+		
 		maxSize_ = m;
+		size = 0;
 	}
 	
 	/**
@@ -30,12 +26,16 @@ public monitor class PQueue {
 	 * otherwise, returns the current position in the list where the name was inserted
 	 */
 	public int insert(String name, int priority){ 
-		if ((priority < 0 && priority > 9) || name.isEmpty()){ 
+	
+		if ((priority < 0 && priority > 9) || name == ""){ 
 			throw new IllegalArgumentException("Empty name or unsupported priority level"); 
 		}
-		waituntil(list.size() < maxSize_);
+		
+		waituntil(size < maxSize_);
+		
 		
 		return -1;
+	
 	}
 	
 	/**
@@ -43,13 +43,7 @@ public monitor class PQueue {
 	 * @return the position of the name in the list, if not found return -1
 	 */
 	public int search(String name){
-		int position = 0;
-		for (Node n: list){
-			if (n.name.equals(name)){
-				return position;
-			}
-			++position;
-		}
+		
 		return -1;
 	}
 	
@@ -59,8 +53,8 @@ public monitor class PQueue {
 	 * The name is deleted from the list.
 	 */
 	public String getFirst(){ 
-		waituntil(list.size() > 0);
-		return list.removeFirst().name;
+		waituntil(size > 0);
+		return "";
 	}
 
 	
@@ -68,28 +62,12 @@ public monitor class PQueue {
 		
 		final String name;
 		final int priority;
+		Node next;
 		
-		public Node(String name, int priority){
+		public Node(String name, int priority, Node next){
 			this.name = name;
 			this.priority = priority; 
-		}
-		
-		@Override 
-		public boolean equals(Object obj) {
-		    if (obj == null) {
-		        return false;
-		    }
-		    if (getClass() != obj.getClass()) {
-		        return false;
-		    }
-		    final Node other = (Node) obj;
-		    if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
-		        return false;
-		    }
-		    if (this.priority != other.priority) {
-		        return false;
-		    }
-		    return true;
+			this.next = next;
 		}
 		
 	}
