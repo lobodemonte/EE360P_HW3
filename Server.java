@@ -3,7 +3,7 @@ import java.io.*;
 
 public class Server {
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
 	
 	
@@ -50,7 +50,7 @@ public class Server {
 		
 		bookOwner = new int[numBooks];
 		for(int i = 0; i < bookOwner.length; i++) {
-			bookOwner[i] = 0;
+			bookOwner[i] = -1;
 		}
 		
 			if(DEBUG) {
@@ -95,6 +95,7 @@ public class Server {
 				
 				//if statement basically allows me to skip over this on the first time
 				if(returnMsg != null) {
+					
 					returnpacket = new DatagramPacket(
 							returnMsg,
 							returnMsg.length,
@@ -105,27 +106,34 @@ public class Server {
 				
 				datapacket = new DatagramPacket(buf, buf.length);
 				datasocket.receive(datapacket);
-			
-				////////////////
-				
-					if(DEBUG) {
-						System.out.println("a message has been received");
-					}
 				
 				
-				String msg = new String(datapacket.getData());
+				String msg = new String(datapacket.getData(), 0, datapacket.getLength());
+				
+						if(DEBUG) {
+							System.out.println("a message has been received: " + msg);
+						}
+				
 				String[] msgParts = msg.split(" ");
 				
 				if(msgParts.length != 3) {
 					returnMsg = "error".getBytes();
 					continue;
 				}
+						
 				
-				if(msgParts[1].length() < 2 || msgParts[0].charAt(0) != 'b') {
+				if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
 					returnMsg = "error".getBytes();
 					continue;
 				}
 				
+				if(DEBUG) {
+					System.out.println("msgParts[0]: " + msgParts[0]);
+					System.out.println("msgParts[1]: " + msgParts[1]);
+					System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
+					System.out.println("msgParts[2]: " + msgParts[2]);
+				}
+							
 				int bookNum, clientNum;
 				
 				try {
@@ -137,23 +145,23 @@ public class Server {
 					continue;
 				}
 				
-				if(msgParts[1].equals("reserve")) {
+				if(msgParts[2].equals("reserve")) {
 					if(reserveBook(bookNum, clientNum)) {
 						returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
 						continue;
 					}
 					else {
-						returnMsg = ("fail c" + clientNum + " " + "b" + "bookNum").getBytes();
+						returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
 						continue;
 					}
 				}
-				else if(msgParts[1].equals("return")) {
+				else if(msgParts[2].equals("return")) {
 					if(returnBook(bookNum, clientNum)) {
 						returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
 						continue;
 					}
 					else {
-						returnMsg = ("fail c" + clientNum + " " + "b" + "bookNum").getBytes();
+						returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
 						continue;
 					}
 				}

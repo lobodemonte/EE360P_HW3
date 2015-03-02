@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 public class Client {
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	
 	private static int clientID;
 	private static String addressIP;
@@ -170,14 +170,13 @@ public class Client {
             DatagramSocket datasocket = new DatagramSocket();
             Scanner sc = new Scanner(System.in);
             
-            byte[] buffer = new byte[message.length()];
+            byte[] buffer = new byte[len];
             buffer = message.getBytes();
             sPacket = new DatagramPacket(buffer, buffer.length, ia, port);
             datasocket.send(sPacket);            	
             rPacket = new DatagramPacket(rbuffer, rbuffer.length);
             datasocket.receive(rPacket);
-            retstring = new String(rPacket.getData(), 0,
-            		rPacket.getLength());
+            retstring = new String(rPacket.getData(), 0, rPacket.getLength());
         } catch (UnknownHostException e) {
             System.err.println(e);
         } catch (SocketException e) {
@@ -186,7 +185,7 @@ public class Client {
             System.err.println(e);
         }
         
-        //return retstring;
+        System.out.println(retstring);
 	}
 	
 	private static void sendTCP(int port, String message) {
