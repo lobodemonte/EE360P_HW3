@@ -1,2 +1,9 @@
-1 128.62.63.111
-b8 reserve 10000 U
+1 localhost
+sleep 2000
+b8 reserve 9000 U
+b10 reserve 9000 U
+b11 reserve 9000 U
+b1 return 9000 U
+b8 reserve 9000 U
+b8 return 9000 U
+b8 return 9000 U
