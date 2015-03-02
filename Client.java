@@ -1,19 +1,35 @@
-import java.net.*; import java.io.*; import java.util.Scanner;
+import java.net.*;
+import java.io.*;
+import java.util.Scanner;
 
 public class Client {
+	
+	private static final boolean DEBUG = true;
 	
 	private static int clientID;
 	private static String addressIP;
 	
 	public static void main(String[] args) {
 		
-		if(args.length < 1) {
-			throw new IllegalArgumentException("Must provide input");
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		String s = null;
+		
+		try {
+			s = in.readLine();
+		} catch (IOException e) {
+			// TODO: how handle no input?
+			e.printStackTrace();
+			s = "";
 		}
 		
-		String[] parts = args[0].split(" ");
+		String[] parts = s.split(" ");
 		
 		if(parts.length != 2) {
+			//close b/c leaving early
+			try {
+				in.close();
+			} catch (IOException e) { }
+			
 			throw new IllegalArgumentException("Must provide <clientID ip_server>");
 		}
 		
@@ -23,19 +39,54 @@ public class Client {
 			clientID = Integer.parseInt(parts[0]);
 		}
 		catch(NumberFormatException e) {
+			//close b/c leaving early
+			try {
+				in.close();
+			} catch (IOException e1) { }
+			
 			throw new IllegalArgumentException("Must provide valid numbers");
 		}
 		
 		if(clientID <= 0) {
+			//close b/c leaving early
+			try {
+				in.close();
+			} catch (IOException e) { }
+			
 			throw new IllegalArgumentException("Must provide nonnegative, nonzero client ID");
 		}
 		
-		//TODO: error check IP address
+		//TODO: error check IP address??
 		
-		//valid
 		
-		for(int i = 1; i < args.length; i++) {
-			parts = args[i].split(" ");
+		
+		if(DEBUG) {
+			System.out.println("***************************");
+			System.out.println("input was: " + s);
+			System.out.println("clientID: " + clientID);
+			System.out.println("IP address: " + addressIP);
+			System.out.println("intitializations done");
+			System.out.println("***************************");
+		}
+		
+		
+		while(true) {
+			
+			try {
+				s = in.readLine();
+			} catch (IOException e) {
+				break;
+			}
+			
+			if(s == null) {
+				break;
+			}
+			
+			if(DEBUG) {
+				System.out.println("read input line: " + s);
+			}
+			
+			parts = s.split(" ");
 			
 			if(parts.length == 2 && parts[0].equals("sleep")) {
 				long sleeptime = 0;
@@ -44,7 +95,13 @@ public class Client {
 					sleeptime = Long.parseLong(parts[1]);
 				}
 				catch(NumberFormatException e) {
+					
 					continue;
+				}
+				
+				if(DEBUG) {
+					System.out.println("sleeping for " + sleeptime + " ms ...");
+					System.out.println("***************************");
 				}
 				
 				try {
@@ -61,30 +118,47 @@ public class Client {
 				} catch (NumberFormatException e) {
 					continue;
 				}
+
+				//clientNum b# reserve|return
+		        String message = "" + clientID + " " + parts[0] + " " + parts[1];
 				
 				if(parts[3].equals("U")) { //UDP
 					
-					//clientNum b# reserve|return
-			        String message = "" + clientID + " " + parts[0] + " " + parts[1];
+					if(DEBUG) {
+						System.out.println("entering UDP with msg: " + message);
+					}
 					
-					String returnMsg = sendUDP(portNum, message);
+					sendUDP(portNum, message);
 				}
 				else if(parts[3].equals("T")) { //TCP
 					
+					if(DEBUG) {
+						System.out.println("entering TCP with msg: " + message);
+					}
+					
+					sendTCP(portNum, message);
 				}
+				else {
+					//TODO: anything???
+					if(DEBUG) {
+						System.out.println("input deemed incorrect, skipping");
+						System.out.println("***************************");
+					}
+				}	
 				
 				
 			}
 			else {
-				//TODO: something??
-			}
-			
-			
-		}
-		
+				//TODO: anything???
+				if(DEBUG) {
+					System.out.println("input deemed incorrect, skipping");
+					System.out.println("***************************");
+				}
+			}			
+		}		
 	}
 	
-	private static String sendUDP(int port, String message) {
+	private static void sendUDP(int port, String message) {
 		String hostname = addressIP;
 		String retstring = null;
         int len = 1024;
@@ -112,7 +186,10 @@ public class Client {
             System.err.println(e);
         }
         
-        return retstring;
+        //return retstring;
+	}
+	
+	private static void sendTCP(int port, String message) {
 	}
 
 }

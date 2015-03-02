@@ -3,19 +3,33 @@ import java.io.*;
 
 public class Server {
 	
-	private static int bookAvail[];
+	private static final boolean DEBUG = true;
+	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
+	
 	
 	public static void main(String[] args) {
 		
-		if(args.length == 0) {
-			throw new IllegalArgumentException("Must provide <#books UDPport TCPport>");
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		String s = null;
+		
+		try {
+			s = in.readLine();
+		} catch (IOException e) {
+			// TODO: how handle no input?
+			e.printStackTrace();
+			s = "";
 		}
 		
-		String parts[] = args[0].split(" ");
+		try {
+			in.close();
+		} catch (IOException e) { }
+		
+		String[] parts = s.split(" ");
 		
 		if(parts.length != 3) {
 			throw new IllegalArgumentException("Must provide <#books UDPport TCPport>");
 		}
+		
 		
 		int numBooks, portUDP, portTCP;
 		
@@ -34,15 +48,40 @@ public class Server {
 		
 		//input is valid!!
 		
-		bookAvail = new int[numBooks];
-		for(int i = 0; i < bookAvail.length; i++) {
-			bookAvail[i] = 0;
+		bookOwner = new int[numBooks];
+		for(int i = 0; i < bookOwner.length; i++) {
+			bookOwner[i] = 0;
 		}
 		
-		//SERVER STUFF:
-		//TODO: separate thread for TCP
+			if(DEBUG) {
+				System.out.println("***************************");
+				System.out.println("input was: " + s);
+				System.out.println("number of books: " + numBooks);
+				System.out.println("UDP port: " + portUDP);
+				System.out.println("TCP port: " + portTCP);
+				System.out.println("intitializations done");
+				System.out.println("***************************");
+			}
 		
-		//UDP:
+			
+		//run both TCP and UDP at same time:
+			
+		Thread t0 = new Thread() {
+			public void run() {
+				TCPServer();
+			}
+		};
+		t0.start();		
+		UDPServer(portUDP);
+			
+	}
+	
+	private static void UDPServer(int portUDP) {
+		
+		while(true) {
+			
+		
+		
 		
 		DatagramPacket datapacket, returnpacket;
 		datapacket = null;
@@ -68,6 +107,11 @@ public class Server {
 				datasocket.receive(datapacket);
 			
 				////////////////
+				
+					if(DEBUG) {
+						System.out.println("a message has been received");
+					}
+				
 				
 				String msg = new String(datapacket.getData());
 				String[] msgParts = msg.split(" ");
@@ -125,17 +169,27 @@ public class Server {
 			System.err.println(e);
 		}
 		
+		}
+
+	}
+	
+	private static void TCPServer() {
+		
+		while(true){
+			
+		}
+		
 	}
 
 	private static synchronized boolean reserveBook (int book, int clientNum) {
 		
-		if(book < 1 || book > bookAvail.length) {
+		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
 		}
 		
 		//-1 because indices 0-9 represent books 1-10, etc.
-		if(bookAvail[book - 1] == 0) {
-			bookAvail[book - 1] = clientNum; //check out book to client
+		if(bookOwner[book - 1] == -1) {
+			bookOwner[book - 1] = clientNum; //check out book to client
 			return true;
 		}
 		
@@ -145,12 +199,12 @@ public class Server {
 	
 	private static synchronized boolean returnBook (int book, int clientNum) {
 		
-		if(book < 1 || book > bookAvail.length) {
+		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
 		}
 		
-		if(bookAvail[book - 1] == clientNum) {
-			bookAvail[book - 1] = 0; //return book successfully
+		if(bookOwner[book - 1] == clientNum) {
+			bookOwner[book - 1] = -1; //return book successfully
 			return true;
 		}
 		
