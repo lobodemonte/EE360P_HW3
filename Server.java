@@ -1,5 +1,6 @@
 import java.net.*;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 import java.io.*;
 
 public class Server {
@@ -104,13 +105,15 @@ public class Server {
 					datasocket.receive(datapacket);
 					datasocket.close(); //forgot to close it
 					
-					String msg = new String(datapacket.getData(), 0, datapacket.getLength());
+					String request = new String(datapacket.getData(), 0, datapacket.getLength());
 					
 					if(DEBUG) {
-						System.out.println("a message has been received: " + msg);
+						System.out.println("a message has been received: " + request);
 					}
 					
-					String[] msgParts = msg.split(" ");
+					returnMsg = serveRequest(request);
+					
+					/*String[] msgParts = msg.split(" ");
 					
 					if(msgParts.length != 3) {
 						returnMsg = "error".getBytes();
@@ -163,7 +166,7 @@ public class Server {
 					catch(NumberFormatException e) {
 						returnMsg = "error".getBytes();
 						continue;
-					}				
+					}	*/			
 				}
 			} catch (SocketException e) {
 				System.err.println(e);
@@ -205,9 +208,7 @@ public class Server {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-	        }
-			
-			
+	        }	
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -220,27 +221,13 @@ public class Server {
 	                // log error just in case
 	            }
 	        }
-		}*/
-		
-
-        
-		
+		}*/	
 	}
 	
-	private static void serveRequest(String cmd){
-		
-		String[] msgParts = cmd.split(" ");
-		byte[] returnMsg;
-		
-		if(msgParts.length != 3) {
-			returnMsg = "error".getBytes();
-			//continue;
-		}
+	private static byte[] serveRequest(String request){
 
-		if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
-			returnMsg = "error".getBytes();
-			return;//continue;
-		}
+		String[] msgParts = request.split(" ");
+		int bookNum, clientNum;
 		
 		if(DEBUG) {
 			System.out.println("msgParts[0]: " + msgParts[0]);
@@ -248,45 +235,50 @@ public class Server {
 			System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
 			System.out.println("msgParts[2]: " + msgParts[2]);
 		}
-					
-		int bookNum, clientNum;
 		
+		if(msgParts.length != 3) {
+			return "error".getBytes();
+			//continue;
+		}
+		if(msgParts[1].length() < 2 || Pattern.matches( msgParts[1], "^([b][0-9]+)$")){//TODO check regex
+			return "error".getBytes();
+			//continue;
+		}
+			
 		try {
 			clientNum = Integer.parseInt(msgParts[0]);
 			bookNum = Integer.parseInt(msgParts[1].substring(1));
 			
 			if(msgParts[2].equals("reserve")) {
 				if(reserveBook(bookNum, clientNum)) {
-					returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
-					return;
+					return ("c" + clientNum + " " + "b" + bookNum).getBytes();
+					//continue;
 				}
 				else {
-					returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-					return;
+					return ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+					//continue;
 				}
 			}
 			else if(msgParts[2].equals("return")) {
 				if(returnBook(bookNum, clientNum)) {
-					returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
-					return;//continue;
+					return ("free c" + clientNum + " " + "b" + bookNum).getBytes();
+					//continue;
 				}
 				else {
-					returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-					return;//continue;
+					return ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+					//continue;
 				}
 			}
 			else {
-				returnMsg = "error".getBytes();
-				return;//continue;
+				return "error".getBytes();
+				//continue;
 			}
-
 		}
 		catch(NumberFormatException e) {
-			returnMsg = "error".getBytes();
+			return "error".getBytes();
 			//continue;
 		}
-		
-			}
+	}
 
 	private static synchronized boolean reserveBook (int book, int clientNum) {
 		
