@@ -189,6 +189,21 @@ public class Client {
 	}
 	
 	private static void sendTCP(int port, String message) {
+		Socket clientSocket;
+		String hostname = addressIP;
+		
+		try {
+			clientSocket = new Socket(hostname, port);
+			DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+			BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			outToServer.writeBytes(message + '\n');
+			System.out.println(inFromServer.readLine());
+			clientSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		  
 	}
 
 }

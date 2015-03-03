@@ -35,6 +35,7 @@ public monitor class PQueue {
 		}
 		waituntil(list.size() < maxSize_);
 		
+		//TODO: also need to check if name exists in different priorities?
 		if (list.contains(new Node(name, priority))){return -1;}
 		
 		int position = 0;
