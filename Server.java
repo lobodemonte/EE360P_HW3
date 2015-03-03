@@ -1,4 +1,5 @@
 import java.net.*;
+import java.util.StringTokenizer;
 import java.io.*;
 
 public class Server {
@@ -78,7 +79,7 @@ public class Server {
 	
 	private static void UDPServer(int portUDP) {
 		
-			while(true) {
+		while(true) {
 			DatagramPacket datapacket, returnpacket;
 			datapacket = null;
 			byte[] returnMsg = null;
@@ -91,7 +92,6 @@ public class Server {
 					
 					//if statement basically allows me to skip over this on the first time
 					if(returnMsg != null) {
-						
 						returnpacket = new DatagramPacket(
 								returnMsg,
 								returnMsg.length,
@@ -102,13 +102,13 @@ public class Server {
 					
 					datapacket = new DatagramPacket(buf, buf.length);
 					datasocket.receive(datapacket);
-					datasocket.close(); //you forgot to close it
+					datasocket.close(); //forgot to close it
 					
 					String msg = new String(datapacket.getData(), 0, datapacket.getLength());
 					
-							if(DEBUG) {
-								System.out.println("a message has been received: " + msg);
-							}
+					if(DEBUG) {
+						System.out.println("a message has been received: " + msg);
+					}
 					
 					String[] msgParts = msg.split(" ");
 					
@@ -116,8 +116,7 @@ public class Server {
 						returnMsg = "error".getBytes();
 						continue;
 					}
-							
-					
+	
 					if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
 						returnMsg = "error".getBytes();
 						continue;
@@ -179,11 +178,125 @@ public class Server {
 	
 	private static void TCPServer() {
 		
-		while(true){
+        ServerSocket servSocket;
+        Socket connectionSocket;
+        BufferedReader inFromClient;
+        DataOutputStream outToClient;
+        String clientRequest;
+        int port = 666; //TODO change this
+        
+		try {
+			servSocket = new ServerSocket(port);
 			
+			while(true)
+	        {   
+				try {
+					connectionSocket = servSocket.accept();
+					
+					inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+			        
+			        clientRequest = inFromClient.readLine();
+			        
+			        StringTokenizer cmdTokens = new StringTokenizer(clientRequest);
+			        
+			        //<clientid> <booknumber> reserve/return;
+			        
+			        //TODO check client request
+			        if (cmdTokens.countTokens() != 3){
+			        	
+			        }
+			        
+			        System.out.println("Received: " + clientRequest);
+			       
+			        
+			        outToClient.writeBytes("I got you"); //TODO change this
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	        }
+			
+			
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
+		/*finally{
+			if (servSocket != null) {
+	            try {
+	                servSocket.close();
+	            } catch (IOException e) {
+	                // log error just in case
+	            }
+	        }
+		}*/
+		
+
+        
 		
 	}
+	
+	private void serveRequest(String cmd){
+		
+		String[] msgParts = cmd.split(" ");
+		byte[] returnMsg;
+		
+		if(msgParts.length != 3) {
+			returnMsg = "error".getBytes();
+			//continue;
+		}
+
+		if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
+			returnMsg = "error".getBytes();
+			return;//continue;
+		}
+		
+		if(DEBUG) {
+			System.out.println("msgParts[0]: " + msgParts[0]);
+			System.out.println("msgParts[1]: " + msgParts[1]);
+			System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
+			System.out.println("msgParts[2]: " + msgParts[2]);
+		}
+					
+		int bookNum, clientNum;
+		
+		try {
+			clientNum = Integer.parseInt(msgParts[0]);
+			bookNum = Integer.parseInt(msgParts[1].substring(1));
+			
+			if(msgParts[2].equals("reserve")) {
+				if(reserveBook(bookNum, clientNum)) {
+					returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
+					return;
+				}
+				else {
+					returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+					return;
+				}
+			}
+			else if(msgParts[2].equals("return")) {
+				if(returnBook(bookNum, clientNum)) {
+					returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
+					return;//continue;
+				}
+				else {
+					returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+					return;//continue;
+				}
+			}
+			else {
+				returnMsg = "error".getBytes();
+				return;//continue;
+			}
+
+		}
+		catch(NumberFormatException e) {
+			returnMsg = "error".getBytes();
+			//continue;
+		}
+		
+			}
 
 	private static synchronized boolean reserveBook (int book, int clientNum) {
 		
