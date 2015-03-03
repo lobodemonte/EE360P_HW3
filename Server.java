@@ -15,71 +15,71 @@ public class Server {
 		
 		try {
 			s = in.readLine();
+			
+			try {
+				
+				in.close();
+				String[] parts = s.split(" ");
+				if(parts.length != 3) {
+					throw new IllegalArgumentException("Must provide <#books UDPport TCPport>");
+				}
+				
+				
+				int numBooks, portUDP, portTCP;
+				
+				try {
+					numBooks = Integer.parseInt(parts[0]);
+					portUDP = Integer.parseInt(parts[1]);
+					portTCP = Integer.parseInt(parts[2]);
+					if(numBooks <= 0 || portUDP <= 0 || portTCP <= 0) {
+						throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");
+					}
+					
+					//input is valid!!
+					
+					bookOwner = new int[numBooks];
+					
+					for(int i = 0; i < bookOwner.length; i++) {
+						bookOwner[i] = -1;
+					}
+					
+					if(DEBUG) {
+						System.out.println("***************************");
+						System.out.println("input was: " + s);
+						System.out.println("number of books: " + numBooks);
+						System.out.println("UDP port: " + portUDP);
+						System.out.println("TCP port: " + portTCP);
+						System.out.println("intitializations done");
+						System.out.println("***************************");
+					}
+						
+					//run both TCP and UDP at same time:
+						
+					Thread t0 = new Thread() {
+						public void run() {
+							TCPServer();
+						}
+					};
+					
+					t0.start();		
+					UDPServer(portUDP);
+				}
+				catch(NumberFormatException e) {
+					throw new IllegalArgumentException("Must provide valid numbers");
+				}
+			} catch (IOException e) { }
+			
 		} catch (IOException e) {
-			// TODO: how handle no input?
+			// TODO: how handle no input? Do nothing?
 			e.printStackTrace();
 			s = "";
-		}
-		
-		try {
-			in.close();
-		} catch (IOException e) { }
-		
-		String[] parts = s.split(" ");
-		
-		if(parts.length != 3) {
-			throw new IllegalArgumentException("Must provide <#books UDPport TCPport>");
-		}
-		
-		
-		int numBooks, portUDP, portTCP;
-		
-		try {
-			numBooks = Integer.parseInt(parts[0]);
-			portUDP = Integer.parseInt(parts[1]);
-			portTCP = Integer.parseInt(parts[2]);
-		}
-		catch(NumberFormatException e) {
-			throw new IllegalArgumentException("Must provide valid numbers");
-		}
-		
-		if(numBooks <= 0 || portUDP <= 0 || portTCP <= 0) {
-			throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");
-		}
-		
-		//input is valid!!
-		
-		bookOwner = new int[numBooks];
-		for(int i = 0; i < bookOwner.length; i++) {
-			bookOwner[i] = -1;
-		}
-		
-			if(DEBUG) {
-				System.out.println("***************************");
-				System.out.println("input was: " + s);
-				System.out.println("number of books: " + numBooks);
-				System.out.println("UDP port: " + portUDP);
-				System.out.println("TCP port: " + portTCP);
-				System.out.println("intitializations done");
-				System.out.println("***************************");
-			}
-		
-			
-		//run both TCP and UDP at same time:
-			
-		Thread t0 = new Thread() {
-			public void run() {
-				TCPServer();
-			}
-		};
-		t0.start();		
-		UDPServer(portUDP);
-			
+		}	
 	}
 	
 	private static void UDPServer(int portUDP) {
 		
 		while(true) {
+			
 			DatagramPacket datapacket, returnpacket;
 			datapacket = null;
 			byte[] returnMsg = null;
@@ -134,37 +134,36 @@ public class Server {
 					try {
 						clientNum = Integer.parseInt(msgParts[0]);
 						bookNum = Integer.parseInt(msgParts[1].substring(1));
+						
+						if(msgParts[2].equals("reserve")) {
+							if(reserveBook(bookNum, clientNum)) {
+								returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
+								continue;
+							}
+							else {
+								returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+								continue;
+							}
+						}
+						else if(msgParts[2].equals("return")) {
+							if(returnBook(bookNum, clientNum)) {
+								returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
+								continue;
+							}
+							else {
+								returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+								continue;
+							}
+						}
+						else {
+							returnMsg = "error".getBytes();
+							continue;
+						}
 					}
 					catch(NumberFormatException e) {
 						returnMsg = "error".getBytes();
 						continue;
-					}
-					
-					if(msgParts[2].equals("reserve")) {
-						if(reserveBook(bookNum, clientNum)) {
-							returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
-							continue;
-						}
-						else {
-							returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-							continue;
-						}
-					}
-					else if(msgParts[2].equals("return")) {
-						if(returnBook(bookNum, clientNum)) {
-							returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
-							continue;
-						}
-						else {
-							returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-							continue;
-						}
-					}
-					else {
-						returnMsg = "error".getBytes();
-						continue;
 					}				
-	
 				}
 			} catch (SocketException e) {
 				System.err.println(e);
@@ -197,18 +196,9 @@ public class Server {
 			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
 			        
 			        clientRequest = inFromClient.readLine();
-			        
-			        StringTokenizer cmdTokens = new StringTokenizer(clientRequest);
-			        
-			        //<clientid> <booknumber> reserve/return;
-			        
-			        //TODO check client request
-			        if (cmdTokens.countTokens() != 3){
-			        	
-			        }
-			        
 			        System.out.println("Received: " + clientRequest);
-			       
+			        
+			        serveRequest(clientRequest);
 			        
 			        outToClient.writeBytes("I got you"); //TODO change this
 				} catch (IOException e) {
@@ -237,7 +227,7 @@ public class Server {
 		
 	}
 	
-	private void serveRequest(String cmd){
+	private static void serveRequest(String cmd){
 		
 		String[] msgParts = cmd.split(" ");
 		byte[] returnMsg;
