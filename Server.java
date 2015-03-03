@@ -5,7 +5,7 @@ import java.io.*;
 
 public class Server {
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
 	
 	
@@ -46,6 +46,7 @@ public class Server {
 					}
 					
 					if(DEBUG) {
+						/*
 						System.out.println("***************************");
 						System.out.println("input was: " + s);
 						System.out.println("number of books: " + numBooks);
@@ -53,6 +54,7 @@ public class Server {
 						System.out.println("TCP port: " + portTCP);
 						System.out.println("intitializations done");
 						System.out.println("***************************");
+						*/
 					}
 						
 					//run both TCP and UDP at same time:
@@ -100,7 +102,7 @@ public class Server {
 					String request = new String(datapacket.getData(), 0, datapacket.getLength());
 					
 					if(DEBUG) {
-						System.out.println("a message has been received: " + request);
+						System.out.println("UDP received: " + request);
 					}
 					returnMsg = serveRequest(request).getBytes();	
 					
@@ -146,7 +148,7 @@ public class Server {
 			        //clientRequest = "" + inFromClient.read();
 			        
 			        if(DEBUG){
-			        System.out.println("Received: " + clientRequest);
+			        System.out.println("TCP received: " + clientRequest);
 			        }
 			         
 			        String returnMsg = serveRequest(clientRequest);
@@ -187,10 +189,12 @@ public class Server {
 		int bookNum, clientNum;
 		
 		if(DEBUG) {
+			/*
 			System.out.println("msgParts[0]: " + msgParts[0]);
 			System.out.println("msgParts[1]: " + msgParts[1]);
 			System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
 			System.out.println("msgParts[2]: " + msgParts[2]);
+			*/
 		}
 		
 		if(msgParts.length != 3) {

@@ -1,11 +1,8 @@
 1 localhost
-sleep 2000
-b8 reserve 9000 U
+b0 reserve 9000 U
 b10 reserve 9000 U
-b11 reserve 9000 U
-b1 return 9000 U
-b8 reserve 9000 U
-b8 return 9000 U
-b8 return 9000 U
-b3 reserve 10000 T
-b3 return 10000 T
+b2 return 9000 U
+sleep 2000
+b2 reserve 9000 U
+sleep 3000
+b2 reserve 9000 U

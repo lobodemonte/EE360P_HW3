@@ -1,0 +1,5 @@
+2 localhost
+b10 reserve 10000 T
+b2 reserve 10000 T
+sleep 4000
+b2 return 10000 T
