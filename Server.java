@@ -78,104 +78,100 @@ public class Server {
 	
 	private static void UDPServer(int portUDP) {
 		
-		while(true) {
+			while(true) {
+			DatagramPacket datapacket, returnpacket;
+			datapacket = null;
+			byte[] returnMsg = null;
+			int len = 1024; //TODO: need to change/set this ?????
 			
-		
-		
-		
-		DatagramPacket datapacket, returnpacket;
-		datapacket = null;
-		byte[] returnMsg = null;
-		int len = 1024; //TODO: need to change/set this ?????
-		
-		try {
-			DatagramSocket datasocket = new DatagramSocket(portUDP);
-			byte[] buf = new byte[len];
-			while (true) {
-				
-				//if statement basically allows me to skip over this on the first time
-				if(returnMsg != null) {
+			try {
+				DatagramSocket datasocket = new DatagramSocket(portUDP);
+				byte[] buf = new byte[len];
+				while (true) {
 					
-					returnpacket = new DatagramPacket(
-							returnMsg,
-							returnMsg.length,
-							datapacket.getAddress(),
-							datapacket.getPort());
-					datasocket.send(returnpacket);
-				}
-				
-				datapacket = new DatagramPacket(buf, buf.length);
-				datasocket.receive(datapacket);
-				
-				
-				String msg = new String(datapacket.getData(), 0, datapacket.getLength());
-				
-						if(DEBUG) {
-							System.out.println("a message has been received: " + msg);
-						}
-				
-				String[] msgParts = msg.split(" ");
-				
-				if(msgParts.length != 3) {
-					returnMsg = "error".getBytes();
-					continue;
-				}
+					//if statement basically allows me to skip over this on the first time
+					if(returnMsg != null) {
 						
-				
-				if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
-					returnMsg = "error".getBytes();
-					continue;
-				}
-				
-				if(DEBUG) {
-					System.out.println("msgParts[0]: " + msgParts[0]);
-					System.out.println("msgParts[1]: " + msgParts[1]);
-					System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
-					System.out.println("msgParts[2]: " + msgParts[2]);
-				}
+						returnpacket = new DatagramPacket(
+								returnMsg,
+								returnMsg.length,
+								datapacket.getAddress(),
+								datapacket.getPort());
+						datasocket.send(returnpacket);
+					}
+					
+					datapacket = new DatagramPacket(buf, buf.length);
+					datasocket.receive(datapacket);
+					datasocket.close(); //you forgot to close it
+					
+					String msg = new String(datapacket.getData(), 0, datapacket.getLength());
+					
+							if(DEBUG) {
+								System.out.println("a message has been received: " + msg);
+							}
+					
+					String[] msgParts = msg.split(" ");
+					
+					if(msgParts.length != 3) {
+						returnMsg = "error".getBytes();
+						continue;
+					}
 							
-				int bookNum, clientNum;
-				
-				try {
-					clientNum = Integer.parseInt(msgParts[0]);
-					bookNum = Integer.parseInt(msgParts[1].substring(1));
-				}
-				catch(NumberFormatException e) {
-					returnMsg = "error".getBytes();
-					continue;
-				}
-				
-				if(msgParts[2].equals("reserve")) {
-					if(reserveBook(bookNum, clientNum)) {
-						returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
+					
+					if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
+						returnMsg = "error".getBytes();
 						continue;
+					}
+					
+					if(DEBUG) {
+						System.out.println("msgParts[0]: " + msgParts[0]);
+						System.out.println("msgParts[1]: " + msgParts[1]);
+						System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
+						System.out.println("msgParts[2]: " + msgParts[2]);
+					}
+								
+					int bookNum, clientNum;
+					
+					try {
+						clientNum = Integer.parseInt(msgParts[0]);
+						bookNum = Integer.parseInt(msgParts[1].substring(1));
+					}
+					catch(NumberFormatException e) {
+						returnMsg = "error".getBytes();
+						continue;
+					}
+					
+					if(msgParts[2].equals("reserve")) {
+						if(reserveBook(bookNum, clientNum)) {
+							returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
+							continue;
+						}
+						else {
+							returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+							continue;
+						}
+					}
+					else if(msgParts[2].equals("return")) {
+						if(returnBook(bookNum, clientNum)) {
+							returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
+							continue;
+						}
+						else {
+							returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+							continue;
+						}
 					}
 					else {
-						returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
+						returnMsg = "error".getBytes();
 						continue;
-					}
+					}				
+	
 				}
-				else if(msgParts[2].equals("return")) {
-					if(returnBook(bookNum, clientNum)) {
-						returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
-						continue;
-					}
-					else {
-						returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-						continue;
-					}
-				}
-				else {
-					returnMsg = "error".getBytes();
-					continue;
-				}				
-
+			} catch (SocketException e) {
+				System.err.println(e);
+			} catch (IOException e) {
+				System.err.println(e);
 			}
-		} catch (SocketException e) {
-			System.err.println(e);
-		} catch (IOException e) {
-			System.err.println(e);
-		}
 		
 		}
 
