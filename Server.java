@@ -26,12 +26,13 @@ public class Server {
 				}
 				
 				
-				int numBooks, portUDP, portTCP;
+				final int numBooks, portUDP, portTCP;
 				
 				try {
 					numBooks = Integer.parseInt(parts[0]);
 					portUDP = Integer.parseInt(parts[1]);
 					portTCP = Integer.parseInt(parts[2]);
+					
 					if(numBooks <= 0 || portUDP <= 0 || portTCP <= 0) {
 						throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");
 					}
@@ -58,7 +59,7 @@ public class Server {
 						
 					Thread t0 = new Thread() {
 						public void run() {
-							TCPServer();
+							TCPServer(portTCP);
 						}
 					};
 					
@@ -89,18 +90,7 @@ public class Server {
 			try {
 				DatagramSocket datasocket = new DatagramSocket(portUDP);
 				byte[] buf = new byte[len];
-				while (true) {
-					
-					//if statement basically allows me to skip over this on the first time
-					if(returnMsg != null) {
-						returnpacket = new DatagramPacket(
-								returnMsg,
-								returnMsg.length,
-								datapacket.getAddress(),
-								datapacket.getPort());
-						datasocket.send(returnpacket);
-					}
-					
+				while (true) {	
 					datapacket = new DatagramPacket(buf, buf.length);
 					datasocket.receive(datapacket);
 					datasocket.close(); //forgot to close it
@@ -110,88 +100,35 @@ public class Server {
 					if(DEBUG) {
 						System.out.println("a message has been received: " + request);
 					}
+					returnMsg = serveRequest(request);	
 					
-					returnMsg = serveRequest(request);
-					
-					/*String[] msgParts = msg.split(" ");
-					
-					if(msgParts.length != 3) {
-						returnMsg = "error".getBytes();
-						continue;
-					}
-	
-					if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b') {
-						returnMsg = "error".getBytes();
-						continue;
-					}
-					
-					if(DEBUG) {
-						System.out.println("msgParts[0]: " + msgParts[0]);
-						System.out.println("msgParts[1]: " + msgParts[1]);
-						System.out.println("msgParts[1].substring(1): " + msgParts[1].substring(1));
-						System.out.println("msgParts[2]: " + msgParts[2]);
-					}
-								
-					int bookNum, clientNum;
-					
-					try {
-						clientNum = Integer.parseInt(msgParts[0]);
-						bookNum = Integer.parseInt(msgParts[1].substring(1));
-						
-						if(msgParts[2].equals("reserve")) {
-							if(reserveBook(bookNum, clientNum)) {
-								returnMsg = ("c" + clientNum + " " + "b" + bookNum).getBytes();
-								continue;
-							}
-							else {
-								returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-								continue;
-							}
-						}
-						else if(msgParts[2].equals("return")) {
-							if(returnBook(bookNum, clientNum)) {
-								returnMsg = ("free c" + clientNum + " " + "b" + bookNum).getBytes();
-								continue;
-							}
-							else {
-								returnMsg = ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-								continue;
-							}
-						}
-						else {
-							returnMsg = "error".getBytes();
-							continue;
-						}
-					}
-					catch(NumberFormatException e) {
-						returnMsg = "error".getBytes();
-						continue;
-					}	*/			
+					returnpacket = new DatagramPacket(
+							returnMsg,
+							returnMsg.length,
+							datapacket.getAddress(),
+							datapacket.getPort());
+					datasocket.send(returnpacket);
 				}
 			} catch (SocketException e) {
 				System.err.println(e);
 			} catch (IOException e) {
 				System.err.println(e);
 			}
-		
 		}
-
 	}
 	
-	private static void TCPServer() {
+	private static void TCPServer(int port) {
 		
         ServerSocket servSocket;
         Socket connectionSocket;
         BufferedReader inFromClient;
         DataOutputStream outToClient;
         String clientRequest;
-        int port = 666; //TODO change this
         
 		try {
 			servSocket = new ServerSocket(port);
 			
-			while(true)
-	        {   
+			while(true){
 				try {
 					connectionSocket = servSocket.accept();
 					
@@ -201,9 +138,9 @@ public class Server {
 			        clientRequest = inFromClient.readLine();
 			        System.out.println("Received: " + clientRequest);
 			        
-			        serveRequest(clientRequest);
+			        String returnMsg = new String( serveRequest(clientRequest), "UTF-8"); //TODO this scares me
 			        
-			        outToClient.writeBytes("I got you"); //TODO change this
+			        outToClient.writeBytes(returnMsg); 
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -240,7 +177,7 @@ public class Server {
 			return "error".getBytes();
 			//continue;
 		}
-		if(msgParts[1].length() < 2 || Pattern.matches( msgParts[1], "^([b][0-9]+)$")){//TODO check regex
+		if(msgParts[1].length() < 2 || !Pattern.matches( msgParts[1], "^([b][0-9]+)$")){//TODO check regex
 			return "error".getBytes();
 			//continue;
 		}
