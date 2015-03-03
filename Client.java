@@ -196,7 +196,17 @@ public class Client {
 			clientSocket = new Socket(hostname, port);
 			DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			outToServer.writeBytes(message + '\n');
+			
+			if(DEBUG) {
+				System.out.println("message plus newline is: " + message + '\n');
+			}
+			
+			outToServer.writeBytes(message + "\n");
+			
+			if(DEBUG) {
+				System.out.println("finished outToServer.writeBytes");
+			}
+			
 			System.out.println(inFromServer.readLine());
 			clientSocket.close();
 		} catch (IOException e) {

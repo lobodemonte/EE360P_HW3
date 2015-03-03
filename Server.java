@@ -5,7 +5,7 @@ import java.io.*;
 
 public class Server {
 	
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
 	
 	
@@ -87,20 +87,22 @@ public class Server {
 			byte[] returnMsg = null;
 			int len = 1024; //TODO: need to change/set this ?????
 			
+			DatagramSocket datasocket = null;
+			
 			try {
-				DatagramSocket datasocket = new DatagramSocket(portUDP);
+				datasocket = new DatagramSocket(portUDP);
 				byte[] buf = new byte[len];
 				while (true) {	
 					datapacket = new DatagramPacket(buf, buf.length);
 					datasocket.receive(datapacket);
-					datasocket.close(); //forgot to close it
+					
 					
 					String request = new String(datapacket.getData(), 0, datapacket.getLength());
 					
 					if(DEBUG) {
 						System.out.println("a message has been received: " + request);
 					}
-					returnMsg = serveRequest(request);	
+					returnMsg = serveRequest(request).getBytes();	
 					
 					returnpacket = new DatagramPacket(
 							returnMsg,
@@ -114,12 +116,17 @@ public class Server {
 			} catch (IOException e) {
 				System.err.println(e);
 			}
+			
+			if(datasocket != null) {
+				datasocket.close(); //forgot to close it
+			}
+			
 		}
 	}
 	
 	private static void TCPServer(int port) {
 		
-        ServerSocket servSocket;
+        ServerSocket servSocket = null;
         Socket connectionSocket;
         BufferedReader inFromClient;
         DataOutputStream outToClient;
@@ -136,11 +143,15 @@ public class Server {
 			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
 			        
 			        clientRequest = inFromClient.readLine();
+			        //clientRequest = "" + inFromClient.read();
+			        
+			        if(DEBUG){
 			        System.out.println("Received: " + clientRequest);
+			        }
+			         
+			        String returnMsg = serveRequest(clientRequest);
+			        outToClient.writeBytes(returnMsg + "\n"); 
 			        
-			        String returnMsg = new String( serveRequest(clientRequest), "UTF-8"); //TODO this scares me
-			        
-			        outToClient.writeBytes(returnMsg); 
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -159,9 +170,18 @@ public class Server {
 	            }
 	        }
 		}*/	
+		
+		if(servSocket != null) {
+			try {
+				servSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
-	private static byte[] serveRequest(String request){
+	private static String serveRequest(String request){
 
 		String[] msgParts = request.split(" ");
 		int bookNum, clientNum;
@@ -174,12 +194,10 @@ public class Server {
 		}
 		
 		if(msgParts.length != 3) {
-			return "error".getBytes();
-			//continue;
+			return "error";
 		}
-		if(msgParts[1].length() < 2 || !Pattern.matches( msgParts[1], "^([b][0-9]+)$")){//TODO check regex
-			return "error".getBytes();
-			//continue;
+		if(msgParts[1].length() < 2 || msgParts[1].charAt(0) != 'b'){//TODO check regex
+			return "error";
 		}
 			
 		try {
@@ -188,32 +206,26 @@ public class Server {
 			
 			if(msgParts[2].equals("reserve")) {
 				if(reserveBook(bookNum, clientNum)) {
-					return ("c" + clientNum + " " + "b" + bookNum).getBytes();
-					//continue;
+					return ("c" + clientNum + " " + "b" + bookNum);
 				}
 				else {
-					return ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-					//continue;
+					return ("fail c" + clientNum + " " + "b" + bookNum);
 				}
 			}
 			else if(msgParts[2].equals("return")) {
 				if(returnBook(bookNum, clientNum)) {
-					return ("free c" + clientNum + " " + "b" + bookNum).getBytes();
-					//continue;
+					return ("free c" + clientNum + " " + "b" + bookNum);
 				}
 				else {
-					return ("fail c" + clientNum + " " + "b" + bookNum).getBytes();
-					//continue;
+					return ("fail c" + clientNum + " " + "b" + bookNum);
 				}
 			}
 			else {
-				return "error".getBytes();
-				//continue;
+				return "error";
 			}
 		}
 		catch(NumberFormatException e) {
-			return "error".getBytes();
-			//continue;
+			return "error";
 		}
 	}
 
