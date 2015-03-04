@@ -12,7 +12,7 @@ public class PQueueTester {
 		public void run(){
 			for(int i = 0; i < attempts; i++){
 				int priv = (int)(Math.random()*10);
-				System.out.println("OBJ"+i+": "+priv+" Inserted at: "+queue.insert("OBJ"+i, priv));
+				System.out.println("OBJ"+i+": "+priv+" Inserted at: "+queue.insert("OBJ"+i, priv)+" by Thread: "+this.getId());
 
 				try {
 					TimeUnit.MILLISECONDS.sleep(50*this.getId());
@@ -21,25 +21,14 @@ public class PQueueTester {
 					e.printStackTrace();
 				}
 			}
-			for(int i = 0; i < attempts; i++){
-				int priv = (int)(Math.random()*10);
-				System.out.println("OBJ"+i+": "+priv+" Inserted at: "+queue.insert("OBJ"+i, priv));
-
-				try {
-					TimeUnit.MILLISECONDS.sleep(50*this.getId());
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			System.out.println(queue);
+			System.out.println("ENQ Thread"+this.getId()+" done.");
 		}
 	}
 	private static class deqThread extends Thread {
 		public void run(){
 			
 			for(int i = 0; i < attempts; i++){
-				System.out.println("Dequeued: "+queue.getFirst()+" by "+this.getId());
+				System.out.println("Dequeued: "+queue.getFirst()+" by Thread: "+this.getId());
 				
 				try {
 					TimeUnit.MILLISECONDS.sleep(50*this.getId());
@@ -48,18 +37,7 @@ public class PQueueTester {
 					e.printStackTrace();
 				}
 			}
-			for(int i = 0; i < attempts; i++){
-				System.out.println("Dequeued: "+queue.getFirst()+" by "+this.getId());
-				
-				try {
-					TimeUnit.MILLISECONDS.sleep(50*this.getId());
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-			
+			System.out.println("DEQ Thread"+this.getId()+" done.");
 		}
 	}
 	private static class searchThread extends Thread {
@@ -95,7 +73,7 @@ public class PQueueTester {
 		for(int i = 0; i < enqs.length; i++) {
 			enqs[i].start();
 		}
-		for(int i = 0; i < enqs.length; i++) {
+		for(int i = 0; i < deqs.length; i++) {
 			deqs[i].start();
 		}
 		/*for(int i = 0; i < enqs.length; i++) {
@@ -115,7 +93,7 @@ public class PQueueTester {
 				e.printStackTrace();
 			}
 		}*/
-		//search.start();
+		search.start();
 		
 		
 		
