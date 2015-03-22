@@ -5,7 +5,7 @@ import java.io.*;
 
 public class Server {
 	
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
 	
 	
