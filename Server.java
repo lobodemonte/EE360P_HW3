@@ -1,5 +1,6 @@
 import java.net.*;
 import java.io.*;
+import java.util.PriorityQueue;
 
 public class Server {
 	
@@ -9,10 +10,11 @@ public class Server {
 	//resets to zero after it comes back up after the crash.
 	static int bookOwner[];			//clientID possessing corresponding book, -1 for server having book
 	static String servers[];		//Contains the address of own and other servers
+	static int serverid;
 	
 	public static void main(String[] args) {
 		
-		final int serverid, nInstances, numBooks; 
+		final int nInstances, numBooks; 
 		
 		
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -23,7 +25,7 @@ public class Server {
 			
 			try {
 				
-				in.close();
+				
 				String[] parts = s.split(" ");
 				
 				if(parts.length != 3) {
@@ -36,13 +38,13 @@ public class Server {
 					serverid   = Integer.parseInt(parts[0]);
 					nInstances = Integer.parseInt(parts[1]);	//n
 					numBooks   = Integer.parseInt(parts[2]);	//z
-					
-					bookOwner = new int[numBooks]; 
-					servers = new String[nInstances];
-					
+
 					if (serverid <= 0 || nInstances <= 0 || numBooks <= 0) { 
 						throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");
 					}
+					
+					bookOwner = new int[numBooks]; 
+					servers = new String[nInstances];
 					
 					for(int i = 0; i < bookOwner.length; i++) {
 						bookOwner[i] = -1;
@@ -60,19 +62,13 @@ public class Server {
 					
 					String address[] = servers[serverid-1].split(":");
 					int port = Integer.parseInt(address[1]);
+					
+					//TODO: crash k delta
+					
+					in.close();
+					
 					TCPServer(port);
 					
-					/*
-					if(DEBUG) {	
-						System.out.println("***************************");
-						System.out.println("input was: " + s);
-						System.out.println("number of books: " + numBooks);
-						System.out.println("UDP port: " + portUDP);
-						System.out.println("TCP port: " + portTCP);
-						System.out.println("intitializations done");
-						System.out.println("***************************");			
-					}
-					*/	
 				}
 				catch(NumberFormatException e) {
 					throw new IllegalArgumentException("Must provide valid numbers");
@@ -87,21 +83,43 @@ public class Server {
 		
         ServerSocket servSocket = null;
         Socket connectionSocket;
-        BufferedReader inFromClient;
-        DataOutputStream outToClient;
+        BufferedReader inFromPort;
+        DataOutputStream outToPort;
         String clientRequest;
+        PriorityQueue<Request> requests = new PriorityQueue<Request>();
+        LClock clock = new LClock(serverid);
         
 		try {
 			servSocket = new ServerSocket(port);
 			
 			while(true){
 				try {
-					connectionSocket = servSocket.accept();
 					
-					inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+					//accept message
+					
+					//if: client message
+						//add to own queue
+						//send messages
+					
+					//if: server message
+						//case a: request received: add to queue, reply with timestamped ack
+						//case b: ack received: record.
+						//case c: releaseCS received: remove from queue
+						//case other: recovery related ... leave as TODO for now
+					
+					//if appropriate to enter CS:
+						//enter CS, do the book thing
+						//reply to client
+						//send release to all servers (include summary of change, if any)
+					
+					
+					
+					connectionSocket = servSocket.accept();
+					/*
+					inFromPort = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+			        outToPort = new DataOutputStream(connectionSocket.getOutputStream());
 			        
-			        clientRequest = inFromClient.readLine();
+			        clientRequest = inFromPort.readLine();
 			        //clientRequest = "" + inFromClient.read();
 			        
 			        if(DEBUG){
@@ -109,18 +127,21 @@ public class Server {
 			        }
 			         
 			        String returnMsg = serveRequest(clientRequest);
-			        outToClient.writeBytes(returnMsg + "\n"); 
+			        outToPort.writeBytes(returnMsg + "\n");
+			        */
 			        
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-	        }	
+	        }
+			
+			
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+/*		
 		if(servSocket != null) {
 			try {
 				servSocket.close();
@@ -129,55 +150,9 @@ public class Server {
 				e.printStackTrace();
 			}
 		}
+		*/
 	}
-	
-	/*
-	private static void UDPServer(int portUDP) {
-		
-		while(true) {
-			
-			DatagramPacket datapacket, returnpacket;
-			datapacket = null;
-			byte[] returnMsg = null;
-			int len = 1024; //TODO: need to change/set this ?????
-			
-			DatagramSocket datasocket = null;
-			
-			try {
-				datasocket = new DatagramSocket(portUDP);
-				byte[] buf = new byte[len];
-				while (true) {	
-					datapacket = new DatagramPacket(buf, buf.length);
-					datasocket.receive(datapacket);
-					
-					
-					String request = new String(datapacket.getData(), 0, datapacket.getLength());
-					
-					if(DEBUG) {
-						System.out.println("UDP received: " + request);
-					}
-					returnMsg = serveRequest(request).getBytes();	
-					
-					returnpacket = new DatagramPacket(
-							returnMsg,
-							returnMsg.length,
-							datapacket.getAddress(),
-							datapacket.getPort());
-					datasocket.send(returnpacket);
-				}
-			} catch (SocketException e) {
-				System.err.println(e);
-			} catch (IOException e) {
-				System.err.println(e);
-			}
-			
-			if(datasocket != null) {
-				datasocket.close(); //forgot to close it
-			}
-			
-		}
-	}
-	*/
+
 	
 	private static String serveRequest(String request){
 
@@ -231,7 +206,7 @@ public class Server {
 		}
 	}
 
-	private static synchronized boolean reserveBook (int book, int clientNum) {
+	private static boolean reserveBook (int book, int clientNum) {
 		
 		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
@@ -247,7 +222,7 @@ public class Server {
 		return false;
 	}
 	
-	private static synchronized boolean returnBook (int book, int clientNum) {
+	private static boolean returnBook (int book, int clientNum) {
 		
 		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
@@ -262,5 +237,123 @@ public class Server {
 		return false;
 	}
 
+	private static class Request implements Comparable{
+		private int owner; //id of server that owns the request
+		private LClock ts; //timestamp of request
+		private int acks; //number of acknowledgements TODO: is it important to remember which threads have responded or no?
+		
+		public Request(int o, LClock t) {
+			owner = o;
+			ts = t;
+			acks = 0;
+			
+			ts.setPID(owner); //just to be redundantly sure they're the same, should already be
+		}
+		
+		public LClock getTimeStamp() {
+			return ts.getTimeStamp();
+		}
+		
+		public Request(String s) {
+			String[] parts = s.split(" ");
+			owner = Integer.parseInt(parts[0]);
+			ts = new LClock(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+			acks = 0; //in reality, if we construct in this manner, we won't care about the acks, bc not our request
+		}
+
+		@Override
+		/**
+		 * return value: see LClock.compareTo
+		 */
+		public int compareTo(Object o) {
+			
+			if(o instanceof Request) {
+				return this.ts.compareTo(((Request) o).ts);
+			}
+			
+			else { //TODO: this shouldn't happen???
+				return -1;
+			}
+		}
+	
+		public String toString() {
+			return "" + owner + " " + ts.toString();
+		}
+	}
+	
+	private static class LClock implements Comparable{
+		private int clock;
+		private int pid;
+		
+		public LClock(int id) {
+			pid = id;
+			clock = 0;
+		}
+		
+		public void setPID(int id) {
+			pid = id;
+		}
+		
+		public LClock getTimeStamp() {
+			LClock c = new LClock(pid);
+			c.clock = this.clock;
+			
+			return c;
+		}
+		
+		public LClock(int c, int i) {
+			clock = c;
+			pid = i;
+		}
+		
+		public void tick() {
+			clock++;
+		}
+		
+		/**
+		 * Updates clock to be 1 tick ahead of the max of this and other
+		 * @param other: other clock to compare with
+		 */
+		public void updateClock(LClock other) {
+			
+			if(this.compareTo(other) < 0) {
+				this.clock = other.clock + 1;
+			}
+			else {
+				this.clock++;
+			}
+		}
+
+		@Override
+		/**
+		 * returns a negative number if this < o
+		 * returns 0 if this == o
+		 * returns a positive number if this > o
+		 */
+		public int compareTo(Object o) {
+	
+			if(o instanceof LClock)
+			{
+				LClock other = (LClock) o;
+				
+				//compare based on clock value:
+				int comp = ((Integer) this.clock).compareTo((Integer) other.clock);
+				
+				if(comp == 0) { //break tie with pid
+					return ((Integer) this.pid).compareTo((Integer) other.pid);
+				}
+				else {
+					return comp;
+				}
+			}
+			else { //TODO: this shouldn't happen?
+				return -1;
+			}
+		}
+		
+		public String toString() {
+			return "" + clock + " " + pid;
+		}
+	}
 
 }
