@@ -4,11 +4,16 @@ import java.io.*;
 public class Server {
 	
 	private static final boolean DEBUG = true;
-	private static int bookOwner[]; //clientID possessing corresponding book, -1 for server having book
-	private int servedCount = 0; 	//If k is greater than or equal to this private counter, the server
-									//immediately 'crashes'; otherwise it will crash as soon as the private counter reaches k. 
-									//resets to zero after it comes back up after the crash.
+	static int servedCount = 0; 	//If k is greater than or equal to this private counter, the server
+	//immediately 'crashes'; otherwise it will crash as soon as the private counter reaches k. 
+	//resets to zero after it comes back up after the crash.
+	static int bookOwner[];			//clientID possessing corresponding book, -1 for server having book
+	static String servers[];		//Contains the address of own and other servers
+	
 	public static void main(String[] args) {
+		
+		final int serverid, nInstances, numBooks; 
+		
 		
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		String s = null;
@@ -22,50 +27,52 @@ public class Server {
 				String[] parts = s.split(" ");
 				
 				if(parts.length != 3) {
-					throw new IllegalArgumentException("Must provide <serverid n z> "
-							+ "where n is number of instances and z is number of books"); 
+					throw new IllegalArgumentException("Input must be of form <serverid n z> "); 
 				}
 				
-				final int serverid, nInstances, numBooks; 
+				
 				
 				try {
 					serverid   = Integer.parseInt(parts[0]);
 					nInstances = Integer.parseInt(parts[1]);	//n
 					numBooks   = Integer.parseInt(parts[2]);	//z
 					
-					if (serverid <= 0 || nInstances <= 0 || numBooks <= 0) { throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");}
-					
-					String p= ""; //TODO should we even make it an int? or just leave it a string?		
-					for (int i =0; i < serverid; ++i){ 		//<ipaddress:port>
-						p = in.readLine();
-					}
-					if (p == null) { throw new IllegalArgumentException("Must provide valid number of server address lines");}
-					
-					//int port = Integer.parseInt(p);
-					
-					//if (port <= 0) { throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers"); }			
-					
-					//input is valid!!
-					
 					bookOwner = new int[numBooks]; 
+					servers = new String[nInstances];
+					
+					if (serverid <= 0 || nInstances <= 0 || numBooks <= 0) { 
+						throw new IllegalArgumentException("Must provide nonnegative, nonzero numbers");
+					}
 					
 					for(int i = 0; i < bookOwner.length; i++) {
 						bookOwner[i] = -1;
 					}
-					/*
-					if(DEBUG) {
 					
+					for (int i =0; i < serverid; ++i){ 		//<ipaddress:port>
+						servers[i] = in.readLine();
+						if (servers[i] == null) { 
+							throw new IllegalArgumentException("Must provide valid number of server address lines");
+						}
+					}
+					
+					//TODO more detailed validation of input
+					//input is valid!!
+					
+					String address[] = servers[serverid-1].split(":");
+					int port = Integer.parseInt(address[1]);
+					TCPServer(port);
+					
+					/*
+					if(DEBUG) {	
 						System.out.println("***************************");
 						System.out.println("input was: " + s);
 						System.out.println("number of books: " + numBooks);
 						System.out.println("UDP port: " + portUDP);
 						System.out.println("TCP port: " + portTCP);
 						System.out.println("intitializations done");
-						System.out.println("***************************");
-						
+						System.out.println("***************************");			
 					}
 					*/	
-					TCPServer(port);
 				}
 				catch(NumberFormatException e) {
 					throw new IllegalArgumentException("Must provide valid numbers");
@@ -74,6 +81,54 @@ public class Server {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}	
+	}
+	
+	private static void TCPServer(int port) {
+		
+        ServerSocket servSocket = null;
+        Socket connectionSocket;
+        BufferedReader inFromClient;
+        DataOutputStream outToClient;
+        String clientRequest;
+        
+		try {
+			servSocket = new ServerSocket(port);
+			
+			while(true){
+				try {
+					connectionSocket = servSocket.accept();
+					
+					inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+			        
+			        clientRequest = inFromClient.readLine();
+			        //clientRequest = "" + inFromClient.read();
+			        
+			        if(DEBUG){
+			        System.out.println("TCP received: " + clientRequest);
+			        }
+			         
+			        String returnMsg = serveRequest(clientRequest);
+			        outToClient.writeBytes(returnMsg + "\n"); 
+			        
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	        }	
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		if(servSocket != null) {
+			try {
+				servSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/*
@@ -123,56 +178,11 @@ public class Server {
 		}
 	}
 	*/
-	private static void TCPServer(int port) {
-		
-        ServerSocket servSocket = null;
-        Socket connectionSocket;
-        BufferedReader inFromClient;
-        DataOutputStream outToClient;
-        String clientRequest;
-        
-		try {
-			servSocket = new ServerSocket(port);
-			
-			while(true){
-				try {
-					connectionSocket = servSocket.accept();
-					
-					inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-			        outToClient = new DataOutputStream(connectionSocket.getOutputStream());
-			        
-			        clientRequest = inFromClient.readLine();
-			        //clientRequest = "" + inFromClient.read();
-			        
-			        if(DEBUG){
-			        System.out.println("TCP received: " + clientRequest);
-			        }
-			         
-			        String returnMsg = serveRequest(clientRequest);
-			        outToClient.writeBytes(returnMsg + "\n"); 
-			        
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-	        }	
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		if(servSocket != null) {
-			try {
-				servSocket.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
 	
 	private static String serveRequest(String request){
 
+		//TODO handle the concurrent side of this hw >:?
+		
 		String[] msgParts = request.split(" ");
 		int bookNum, clientNum;
 		
@@ -226,7 +236,7 @@ public class Server {
 		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
 		}
-		
+		//TODO concurrent feature goes here
 		//-1 because indices 0-9 represent books 1-10, etc.
 		if(bookOwner[book - 1] == -1) {
 			bookOwner[book - 1] = clientNum; //check out book to client
@@ -242,7 +252,7 @@ public class Server {
 		if(book < 1 || book > bookOwner.length) {
 			return false; //out of range
 		}
-		
+		//TODO concurrent feature goes here
 		if(bookOwner[book - 1] == clientNum) {
 			bookOwner[book - 1] = -1; //return book successfully
 			return true;
