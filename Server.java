@@ -4,13 +4,14 @@ import java.util.PriorityQueue;
 
 public class Server {
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	static int servedCount = 0; 	//If k is greater than or equal to this private counter, the server
 	//immediately 'crashes'; otherwise it will crash as soon as the private counter reaches k. 
 	//resets to zero after it comes back up after the crash.
 	static int bookOwner[];			//clientID possessing corresponding book, -1 for server having book
 	static String servers[];		//Contains the address of own and other servers
 	static int serverid;
+	private static final int timeout_ = 100;
 	
 	public static void main(String[] args) {
 		
@@ -86,7 +87,7 @@ public class Server {
         BufferedReader inFromPort;
         DataOutputStream outToPort;
         String clientRequest;
-        PriorityQueue<Request> requests = new PriorityQueue<Request>();
+        PriorityQueue<Request> queue = new PriorityQueue<Request>();
         LClock clock = new LClock(serverid);
         
 		try {
@@ -95,27 +96,155 @@ public class Server {
 			while(true){
 				try {
 					
-					//accept message
-					
-					//if: client message
-						//add to own queue
-						//send messages
-					
-					//if: server message
-						//case a: request received: add to queue, reply with timestamped ack
-						//case b: ack received: record.
-						//case c: releaseCS received: remove from queue
-						//case other: recovery related ... leave as TODO for now
-					
-					//if appropriate to enter CS:
-						//enter CS, do the book thing
-						//reply to client
-						//send release to all servers (include summary of change, if any)
-					
-					
-					
 					connectionSocket = servSocket.accept();
+					inFromPort = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+			        outToPort = new DataOutputStream(connectionSocket.getOutputStream());
+			        
+			        String s = inFromPort.readLine();
+			        
+			        if(DEBUG){
+			        System.out.println("TCP received: " + s);
+			        }
+			        
+			        if(s.length() == 0) {						//shouldn't happen?
+			        	connectionSocket.close();
+			        	continue;
+			        }
+			        
+			        if(s.charAt(0) == 'c') {					//client request
+			        	
+			        	clock.tick();
+			        	Request req = new Request(serverid, clock.getTimeStamp(), s, outToPort, connectionSocket);
+			        	queue.add(req);
+			        	
+			        	//send request to others
+			        	for(int i = 0; i < servers.length; i++) {
+			        		
+			        		if(i + 1 != serverid) {				//don't do for yourself
+			        			Socket sock = new Socket(getHostname(i), getPort(i));
+			        			sock.setSoTimeout(timeout_);
+								DataOutputStream toServer = new DataOutputStream(sock.getOutputStream());
+								//BufferedReader fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+								
+								toServer.writeBytes("" + serverid + " request " + req.toString() + "\n");
+								toServer.flush();
+								
+								//TODO: safe to immediately close or no? (I think it is)
+								sock.close();
+			        		}
+			        	}
+			        }
+			        else {										//server request
+			        	
+			        	String[] parts = s.split(" ");
+			        	
+			        	//case a: request received: add to queue, reply with timestamped ack
+			        	if(parts[1].equals("request")) {
+			        		int offset = parts[0].length() + parts[1].length() + 2; //+2 for two spaces
+			        		String requestString = s.substring(offset);
+			        		
+			        		Request req = new Request(requestString);
+			        		queue.add(req);
+			        		
+			        		clock.updateClock(req.getTimeStamp());
+			        		
+			        		outToPort.writeBytes("" + serverid +  " ack " + req.getTimeStamp().toString()
+			        				+ ":" + clock.getTimeStamp() + "\n");
+			        		outToPort.flush();
+			        		connectionSocket.close();
+			        	}
+			        	
+			        	
+						//case b: ack received: record.
+			        	if(parts[1].equals("ack")) {
+			        		int offset = parts[0].length() + parts[1].length() + 2; //+2 for two spaces
+			        		String substring = s.substring(offset);
+			        		
+			        		String[] timeStamps = substring.split(":");
+			        		
+			        		LClock stamp = new LClock(timeStamps[0]);
+			        		
+			        		for(Request r : queue) {
+			        			if(r.getOwner() == serverid && r.getTimeStamp().equals(stamp)) {
+			        				r.ack(Integer.parseInt(parts[0]));
+			        				break;
+			        			}
+			        		}
+			        		
+			        		clock.updateClock(new LClock(timeStamps[1]));
+			        		
+			        		connectionSocket.close();
+			        	}
+			        	
+						//case c: releaseCS received: remove from queue
+			        	
+			        	if(parts[1].equals("release")) {
+			        		int offset = parts[0].length() + parts[1].length() + 2; //+2 for two spaces
+			        		String reqMessage = s.substring(offset);
+			        		
+			        		//just for purposes of maintaining a common table
+			        		serveRequest(reqMessage); //make the change, but don't communicate to client
+			        		
+			        		int releaseServ = Integer.parseInt(parts[0]);
+			        		
+			        		for(Request r : queue) {
+			        			if(r.getOwner() == releaseServ) {
+			        				queue.remove(r);
+			        				break;
+			        			}
+			        			
+			        			
+			        		//TODO: should probably also clock.update() w/a timestamp from request
+			        		
+			        	}
+			        	
+						//case other: recovery related ... leave as TODO for now
+			        }
+					
+			        
+			        
+			        if(queue.size() > 0 && queue.peek().isReady()) {	//time for us to enterCS
+			        	Request req = queue.remove();
+			        	
+			        	//handle request
+			        	String reply = serveRequest(req.getMessage());
+			        	
+			        	//reply to client
+			        	DataOutputStream replyStream = req.getReplyStream();
+			        	replyStream.writeBytes(reply + "\n");
+			        	replyStream.flush();
+			        	
+			        	//TODO: safe to immediately close or no? (I think it is)
+			        	req.getSocket().close();
+			        	
+			        	//send release to all servers
+			        	for(int i = 0; i < servers.length; i++) {
+			        		
+			        		if(i + 1 != serverid) {				//don't do for yourself
+			        			Socket sock = new Socket(getHostname(i), getPort(i));
+			        			sock.setSoTimeout(timeout_);
+								DataOutputStream toServer = new DataOutputStream(sock.getOutputStream());
+								//BufferedReader fromServer = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+								
+								toServer.writeBytes("" + serverid + " release " + req.getMessage() + "\n");
+								toServer.flush();
+								
+								//TODO: safe to immediately close or no? (I think it is)
+								sock.close();
+			        		}
+			        	}
+			        	
+			        	//crash if necessary
+			        	//TODO
+			        	
+			        }
+			        
+			        }
+					
+					
 					/*
+					 * //HW3:
+					connectionSocket = servSocket.accept();
 					inFromPort = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
 			        outToPort = new DataOutputStream(connectionSocket.getOutputStream());
 			        
@@ -141,22 +270,11 @@ public class Server {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-/*		
-		if(servSocket != null) {
-			try {
-				servSocket.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		*/
 	}
 
 	
 	private static String serveRequest(String request){
 
-		//TODO handle the concurrent side of this hw >:?
 		
 		String[] msgParts = request.split(" ");
 		int bookNum, clientNum;
@@ -237,28 +355,58 @@ public class Server {
 		return false;
 	}
 
+	private static InetAddress getHostname(int i) throws UnknownHostException{	
+		String[] components = servers[i].split(":");
+		if (components[i].equals("localhost"))
+			return InetAddress.getLocalHost();
+		else
+			return InetAddress.getByName(components[i]);
+	}
+	private static int getPort(int i){
+		String[] components = servers[i].split(":");
+		int port = Integer.parseInt(components[1]);
+		return port;
+	}
+	
 	private static class Request implements Comparable{
 		private int owner; //id of server that owns the request
 		private LClock ts; //timestamp of request
 		private int acks; //number of acknowledgements TODO: is it important to remember which threads have responded or no?
+		private String message;
+		private DataOutputStream replyStream;
+		private Socket socket;
+		private boolean copy; //indicates whether this is a copy of a request or actually the original request
 		
-		public Request(int o, LClock t) {
+		public Request(int o, LClock t, String m, DataOutputStream stream, Socket sock) {
 			owner = o;
 			ts = t;
-			acks = 0;
-			
 			ts.setPID(owner); //just to be redundantly sure they're the same, should already be
-		}
-		
-		public LClock getTimeStamp() {
-			return ts.getTimeStamp();
+			message = m;
+			replyStream = stream;
+			socket = sock;
+			
+			acks = 0;
+			copy = false;
 		}
 		
 		public Request(String s) {
 			String[] parts = s.split(" ");
 			owner = Integer.parseInt(parts[0]);
 			ts = new LClock(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+			
 			acks = 0; //in reality, if we construct in this manner, we won't care about the acks, bc not our request
+			message = "";
+			replyStream = null;
+			socket = null;
+			copy = true;
+		}
+		
+		public LClock getTimeStamp() {
+			return ts.getTimeStamp();
+		}
+		
+		public void ack(int servid) {
+			acks++;
 		}
 
 		@Override
@@ -279,6 +427,26 @@ public class Server {
 		public String toString() {
 			return "" + owner + " " + ts.toString();
 		}
+		
+		public String getMessage() {
+			return message;
+		}
+		
+		public boolean isReady() {
+			return (!copy && acks == (servers.length - 1));
+		}
+		
+		public int getOwner() {
+			return owner;
+		}
+		
+		public DataOutputStream getReplyStream() {
+			return replyStream;
+		}
+		
+		public Socket getSocket() {
+			return socket;
+		}
 	}
 	
 	private static class LClock implements Comparable{
@@ -288,6 +456,12 @@ public class Server {
 		public LClock(int id) {
 			pid = id;
 			clock = 0;
+		}
+		
+		public LClock(String s) {
+			String[] parts = s.split(" ");
+			clock = Integer.parseInt(parts[0]);
+			pid = Integer.parseInt(parts[2]);
 		}
 		
 		public void setPID(int id) {
