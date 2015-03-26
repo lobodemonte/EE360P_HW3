@@ -195,6 +195,8 @@ public class Server {
 			        			
 			        			
 			        		//TODO: should probably also clock.update() w/a timestamp from request
+			        			
+			        	    connectionSocket.close();
 			        		
 			        	}
 			        	
