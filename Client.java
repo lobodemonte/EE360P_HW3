@@ -6,8 +6,10 @@ public class Client {
 	
 	private static final boolean DEBUG = false;
 	
-	private static int clientID;
-	private static String addressIP;
+	private static String clientID;
+	private static String[] servers;
+	private static int nServers; 
+	private static final int timeout_ = 100;
 	
 	public static void main(String[] args) {
 		
@@ -16,28 +18,91 @@ public class Client {
 		
 		try {
 			s = in.readLine();
+			String[] parts = s.split(" ");
+			
+			if(parts.length != 2) {
+				in.close();	
+				throw new IllegalArgumentException("Must provide <clientID ip_server>");
+			}
+			
+			clientID = parts[0];
+			
+		
+				nServers = Integer.parseInt(parts[1]);
+			
+			
+			if(clientID.charAt(0) != 'c') { //TODO how to check that the characters after c are proper numbers 
+				//close b/c leaving early
+				in.close();
+				throw new IllegalArgumentException("Must provide nonnegative, nonzero client ID");
+			}
+			
+			for (int i = 0; i < nServers; i++){
+				servers[i] = in.readLine();
+			}
+			
+			
+			if(DEBUG) {
+				System.out.println("***************************");
+				System.out.println("input was: " + s);
+				System.out.println("clientID: " + clientID);
+				//System.out.println("IP address: " + addressIP);
+				System.out.println("intitializations done");
+				System.out.println("***************************");
+			}
+			
+			
+			while(true) {
+				
+				s = in.readLine();
+				
+				if(s == null) {
+					break;
+				}
+				
+				if(DEBUG) {
+					System.out.println("read input line: " + s);
+				}
+				
+				parts = s.split(" ");
+				
+				if(parts[0].equals("sleep")) {
+					long sleeptime = 0;
+					
+					try {
+						sleeptime = Long.parseLong(parts[1]);
+					}
+					catch(NumberFormatException e) {	
+						continue;
+					}
+					
+					if(DEBUG) {
+						System.out.println("sleeping for " + sleeptime + " ms ...");
+						System.out.println("***************************");
+					}
+					
+					try {
+						Thread.sleep(sleeptime);
+					} catch (InterruptedException e) {
+						continue;
+					}
+				}
+				else if (parts[1].equals("reserve") || parts[1].equals("return")){
+					sendTCPRequest(s);
+				}
+				else {
+					//TODO: anything???
+					if(DEBUG) {
+						System.out.println("input deemed incorrect, skipping");
+						System.out.println("***************************");
+					}
+				}			
+			}
 		} catch (IOException e) {
 			// TODO: how handle no input?
 			e.printStackTrace();
 			s = "";
-		}
-		
-		String[] parts = s.split(" ");
-		
-		if(parts.length != 2) {
-			//close b/c leaving early
-			try {
-				in.close();
-			} catch (IOException e) { }
-			
-			throw new IllegalArgumentException("Must provide <clientID ip_server>");
-		}
-		
-		addressIP = parts[1];
-		
-		try {
-			clientID = Integer.parseInt(parts[0]);
-		}
+		}	
 		catch(NumberFormatException e) {
 			//close b/c leaving early
 			try {
@@ -47,173 +112,60 @@ public class Client {
 			throw new IllegalArgumentException("Must provide valid numbers");
 		}
 		
-		if(clientID <= 0) {
-			//close b/c leaving early
-			try {
-				in.close();
-			} catch (IOException e) { }
-			
-			throw new IllegalArgumentException("Must provide nonnegative, nonzero client ID");
-		}
-		
-		//TODO: error check IP address??
-		
-		
-		
-		if(DEBUG) {
-			System.out.println("***************************");
-			System.out.println("input was: " + s);
-			System.out.println("clientID: " + clientID);
-			System.out.println("IP address: " + addressIP);
-			System.out.println("intitializations done");
-			System.out.println("***************************");
-		}
-		
-		
-		while(true) {
-			
-			try {
-				s = in.readLine();
-			} catch (IOException e) {
-				break;
-			}
-			
-			if(s == null) {
-				break;
-			}
-			
-			if(DEBUG) {
-				System.out.println("read input line: " + s);
-			}
-			
-			parts = s.split(" ");
-			
-			if(parts.length == 2 && parts[0].equals("sleep")) {
-				long sleeptime = 0;
-				
-				try {
-					sleeptime = Long.parseLong(parts[1]);
-				}
-				catch(NumberFormatException e) {
+	}
+	
+	private static void sendTCPRequest(String message) {
+		Socket clientSocket;
+		int i = 0;
+		try {
+			while(true){
+				try{
+					clientSocket = new Socket(getHostname(i), getPort(i));
+					i = ((i + 1) % nServers);
 					
-					continue;
-				}
-				
-				if(DEBUG) {
-					System.out.println("sleeping for " + sleeptime + " ms ...");
-					System.out.println("***************************");
-				}
-				
-				try {
-					Thread.sleep(sleeptime);
-				} catch (InterruptedException e) {
-					continue;
-				}
-			}
-			else if(parts.length == 4) {
-				int portNum = 0;
-				
-				try {
-					portNum = Integer.parseInt(parts[2]);
-				} catch (NumberFormatException e) {
-					continue;
-				}
-
-				//clientNum b# reserve|return
-		        String message = "" + clientID + " " + parts[0] + " " + parts[1];
-				
-				if(parts[3].equals("U")) { //UDP
+					clientSocket.setSoTimeout(timeout_);
+					DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+					BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 					
 					if(DEBUG) {
-						System.out.println("entering UDP with msg: " + message);
+						System.out.println("message plus newline is: " + message + '\n');
 					}
 					
-					sendUDP(portNum, message);
-				}
-				else if(parts[3].equals("T")) { //TCP
+					outToServer.writeBytes(message + "\n");
 					
 					if(DEBUG) {
-						System.out.println("entering TCP with msg: " + message);
+						System.out.println("finished outToServer.writeBytes");
 					}
-					
-					sendTCP(portNum, message);
-				}
-				else {
-					//TODO: anything???
-					if(DEBUG) {
-						System.out.println("input deemed incorrect, skipping");
-						System.out.println("***************************");
+	
+					System.out.println(inFromServer.readLine());
+					clientSocket.close();
+					break;
+				} catch(SocketTimeoutException e){
+					if (DEBUG){
+						System.out.println("Server assummed crashed");
 					}
 				}	
-				
-				
 			}
-			else {
-				//TODO: anything???
-				if(DEBUG) {
-					System.out.println("input deemed incorrect, skipping");
-					System.out.println("***************************");
-				}
-			}			
-		}		
-	}
-	
-	private static void sendUDP(int port, String message) {
-		String hostname = addressIP;
-		String retstring = null;
-        int len = 1024;
-        byte[] rbuffer = new byte[len];
-        DatagramPacket sPacket, rPacket;
-        
-        try {
-            InetAddress ia = InetAddress.getByName(hostname);
-            DatagramSocket datasocket = new DatagramSocket();
-            Scanner sc = new Scanner(System.in);
-            
-            byte[] buffer = new byte[len];
-            buffer = message.getBytes();
-            sPacket = new DatagramPacket(buffer, buffer.length, ia, port);
-            datasocket.send(sPacket);            	
-            rPacket = new DatagramPacket(rbuffer, rbuffer.length);
-            datasocket.receive(rPacket);
-            retstring = new String(rPacket.getData(), 0, rPacket.getLength());
-        } catch (UnknownHostException e) {
-            System.err.println(e);
-        } catch (SocketException e) {
-            System.err.println(e);
-        } catch (IOException e) {
-            System.err.println(e);
-        }
-        
-        System.out.println(retstring);
-	}
-	
-	private static void sendTCP(int port, String message) {
-		Socket clientSocket;
-		String hostname = addressIP;
-		
-		try {
-			clientSocket = new Socket(hostname, port);
-			DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-			BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			
-			if(DEBUG) {
-				System.out.println("message plus newline is: " + message + '\n');
-			}
-			
-			outToServer.writeBytes(message + "\n");
-			
-			if(DEBUG) {
-				System.out.println("finished outToServer.writeBytes");
-			}
-			
-			System.out.println(inFromServer.readLine());
-			clientSocket.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (UnknownHostException e){
 			e.printStackTrace();
-		}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+		
 		  
+	}
+	
+	private static InetAddress getHostname(int i) throws UnknownHostException{	
+		String[] components = servers[i].split(":");
+		if (components[i].equals("localhost"))
+			return InetAddress.getLocalHost();
+		else
+			return InetAddress.getByName(components[i]);
+	}
+	private static int getPort(int i){
+		String[] components = servers[i].split(":");
+		int port = Integer.parseInt(components[1]);
+		return port;
 	}
 
 }
