@@ -132,12 +132,13 @@ public class Client {
 					}
 					
 					outToServer.writeBytes(message + "\n");
-					
+					outToServer.flush();
 					if(DEBUG) {
 						System.out.println("finished outToServer.writeBytes");
 					}
 	
 					System.out.println(inFromServer.readLine());
+					
 					clientSocket.close();
 					break;
 				} catch(SocketTimeoutException e){
